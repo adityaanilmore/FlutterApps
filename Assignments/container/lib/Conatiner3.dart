@@ -16,6 +16,5 @@ class Third extends StatelessWidget {
         child: const Center(child: Text("Lets Play")),
       ),
     );
-    ;
   }
 }
