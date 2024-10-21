@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
+import 'todo_model.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class ToDoApp extends StatefulWidget {
   const ToDoApp({super.key});
@@ -11,7 +11,50 @@ class ToDoApp extends StatefulWidget {
 }
 
 class _ToDoAppState extends State<ToDoApp> {
-  void myBottomSheet() {
+  TextEditingController titleController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
+  TextEditingController dateController = TextEditingController();
+  int? editIndex;
+
+  void clearController() {
+    titleController.clear();
+    descriptionController.clear();
+    dateController.clear();
+  }
+
+  void dataSumbit() {
+    if (titleController.text.trim().isNotEmpty &&
+        descriptionController.text.trim().isNotEmpty &&
+        dateController.text.trim().isNotEmpty) {
+      if (editIndex == null) {
+        todocards.add(
+          TodoModel(
+              Title: titleController.text,
+              Description: descriptionController.text,
+              Date: dateController.text),
+        );
+      } else {
+        todocards[editIndex!] = TodoModel(
+            Title: titleController.text,
+            Description: descriptionController.text,
+            Date: dateController.text);
+        editIndex = null;
+      }
+      clearController();
+      setState(() {});
+      Navigator.pop(context);
+    }
+  }
+
+  // Open Bottom Sheet for creating or editing a card
+  void myBottomSheet({TodoModel? todoModel, int? index}) {
+    if (todoModel != null) {
+      titleController.text = todoModel.Title;
+      descriptionController.text = todoModel.Description;
+      dateController.text = todoModel.Date;
+      editIndex = index; // Set the index to know which item to edit
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -28,19 +71,17 @@ class _ToDoAppState extends State<ToDoApp> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "Create To-Do",
+                todoModel == null ? "Create To-Do" : "Edit To-Do",
                 style: GoogleFonts.quicksand(
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(
-                height: 10,
-              ),
+              const SizedBox(height: 10),
               Column(
                 children: [
-                  const SizedBox(width: 10),
                   TextField(
+                    controller: titleController,
                     decoration: InputDecoration(
                       label: Text(
                         "Title",
@@ -69,13 +110,12 @@ class _ToDoAppState extends State<ToDoApp> {
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 20,
-                  ),
+                  const SizedBox(height: 20),
                   TextField(
+                    controller: descriptionController,
                     decoration: InputDecoration(
                       label: Text(
-                        "Decription",
+                        "Description",
                         style: GoogleFonts.quicksand(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -104,8 +144,20 @@ class _ToDoAppState extends State<ToDoApp> {
                   ),
                   const SizedBox(height: 20),
                   TextField(
+                    controller: dateController,
                     decoration: InputDecoration(
-                      suffixIcon: const Icon(Icons.calendar_month_outlined),
+                      suffixIcon: GestureDetector(
+                          child: const Icon(Icons.calendar_month_outlined),
+                          onTap: () async {
+                            DateTime? datepicker = await showDatePicker(
+                                context: context,
+                                firstDate: DateTime(2004),
+                                lastDate: DateTime(2024));
+                            String formattedDate =
+                                DateFormat.yMMMd().format(datepicker!);
+                            dateController.text = formattedDate;
+                            setState(() {});
+                          }),
                       label: Text(
                         "Date",
                         style: GoogleFonts.quicksand(
@@ -136,19 +188,20 @@ class _ToDoAppState extends State<ToDoApp> {
                   ),
                 ],
               ),
-              const SizedBox(
-                height: 30,
-              ),
+              const SizedBox(height: 30),
               SizedBox(
                 width: 400,
                 height: 50,
                 child: ElevatedButton(
-                  style: const ButtonStyle(
-                      backgroundColor: WidgetStatePropertyAll(
-                          Color.fromRGBO(0, 139, 148, 1))),
-                  onPressed: () {},
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(
+                        const Color.fromRGBO(0, 139, 148, 1)),
+                  ),
+                  onPressed: () {
+                    dataSumbit();
+                  },
                   child: Text(
-                    "Sumbit",
+                    todoModel == null ? "Submit" : "Update",
                     style: GoogleFonts.quicksand(
                       fontWeight: FontWeight.w600,
                       fontSize: 18,
@@ -157,14 +210,13 @@ class _ToDoAppState extends State<ToDoApp> {
                   ),
                 ),
               ),
-              const SizedBox(
-                height: 20,
-              )
+              const SizedBox(height: 20),
             ],
           ),
         );
       },
-    );
+    ).whenComplete(
+        () => clearController()); // Clear fields when the sheet closes
   }
 
   List<Color> colorList = [
@@ -173,22 +225,29 @@ class _ToDoAppState extends State<ToDoApp> {
     const Color.fromRGBO(250, 249, 232, 1),
     const Color.fromRGBO(250, 232, 250, 1),
   ];
+  List<TodoModel> todocards = [
+    TodoModel(
+        Title: "flutter", Description: "widget,Expanded ", Date: "11/07/22"),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "To-Do List ",
+          "To-Do List",
           style: GoogleFonts.quicksand(
-              fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white),
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: const Color.fromRGBO(2, 167, 177, 1),
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: ListView.builder(
-          itemCount: 10,
+          itemCount: todocards.length,
           itemBuilder: (BuildContext context, int index) {
             return Padding(
               padding: const EdgeInsets.all(4.0),
@@ -221,17 +280,15 @@ class _ToDoAppState extends State<ToDoApp> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Lorem Ipsum is simply setting industry",
+                                todocards[index].Title,
                                 style: GoogleFonts.quicksand(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
                                 ),
                               ),
-                              const SizedBox(
-                                height: 5,
-                              ),
+                              const SizedBox(height: 5),
                               Text(
-                                "Simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s",
+                                todocards[index].Description,
                                 style: GoogleFonts.quicksand(
                                   fontWeight: FontWeight.w500,
                                   fontSize: 12,
@@ -244,13 +301,11 @@ class _ToDoAppState extends State<ToDoApp> {
                       ],
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(
-                        left: 14.0,
-                      ),
+                      padding: const EdgeInsets.only(left: 14.0),
                       child: Row(
                         children: [
                           Text(
-                            "12/1/24",
+                            todocards[index].Date,
                             style: GoogleFonts.quicksand(
                               fontWeight: FontWeight.w500,
                               fontSize: 13,
@@ -263,14 +318,22 @@ class _ToDoAppState extends State<ToDoApp> {
                               Icons.edit_outlined,
                               color: Color.fromRGBO(0, 139, 148, 1),
                             ),
-                            onPressed: () {},
+                            onPressed: () {
+                              // Open bottom sheet with existing data for editing
+                              myBottomSheet(
+                                  todoModel: todocards[index], index: index);
+                            },
                           ),
                           IconButton(
                             icon: const Icon(
                               Icons.delete_outline,
                               color: Color.fromRGBO(0, 139, 148, 1),
                             ),
-                            onPressed: () {},
+                            onPressed: () {
+                              // Delete the card
+                              todocards.removeAt(index);
+                              setState(() {});
+                            },
                           ),
                         ],
                       ),
@@ -284,7 +347,7 @@ class _ToDoAppState extends State<ToDoApp> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          myBottomSheet();
+          myBottomSheet(); // Open empty bottom sheet for creating a new To-Do
         },
         backgroundColor: const Color.fromRGBO(0, 139, 148, 1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
